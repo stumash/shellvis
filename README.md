@@ -1,6 +1,6 @@
 # shellvis
 
-Transform the current **vis**ual selection with **shell** commands
+Transform the current `vis`ual selection with `shell` commands
 
 ## Install
 
