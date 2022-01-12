@@ -14,4 +14,8 @@ Transform the current `vis`ual selection with `shell` commands
 " base64 encode and decode the current visual selection
 vnoremap <leader>esf :<c-u>call shellvis#do("base64")<cr>
 vnoremap <leader>efs :<c-u>call shellvis#do("base64 -d")<cr>
+
+" gzip then base64
+vnoremap <leader>ezsf :<c-u>call shellvis#do("gzip \| base64")<cr>
+vnoremap <leader>ezfs :<c-u>call shellvis#do("base64 -d \| gzip -d")<cr>
 ```
