@@ -8,10 +8,10 @@ Transform the current `vis`ual selection with `shell` commands
 * pathogen: `git clone git@github.com:stumash/shellvis.git ~/.vim/bundle/shellvis`
 * manual: copy the files to your .vim directory
 
-## Usage
+## Example Usage
 
 ```viml
-" base64
+" base64 encode and decode the current visual selection
 vnoremap <leader>esf :<c-u>call shellvis#do("base64")<cr>
 vnoremap <leader>efs :<c-u>call shellvis#do("base64 -d")<cr>
 ```
