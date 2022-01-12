@@ -5,6 +5,8 @@ Transform the current `vis`ual selection with `shell` commands
 ## Install
 
 * vim-plug: `Plug 'stumash/shellvis'`
+* pathogen: `git clone git@github.com:stumash/shellvis.git ~/.vim/bundle/shellvis`
+* manual: copy the files to your .vim directory
 
 ## Usage
 
