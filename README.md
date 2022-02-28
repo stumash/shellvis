@@ -18,4 +18,7 @@ vnoremap <leader>efs :<c-u>call shellvis#do("base64 -d")<cr>
 " gzip then base64
 vnoremap <leader>ezsf :<c-u>call shellvis#do("gzip \| base64")<cr>
 vnoremap <leader>ezfs :<c-u>call shellvis#do("base64 -d \| gzip -d")<cr>
+
+" json formatting
+vnoremap <leader>json :<c-u>call shellvis#do("jq")<cr>
 ```
