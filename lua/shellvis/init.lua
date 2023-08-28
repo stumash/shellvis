@@ -15,7 +15,7 @@ local function execute(cmd, text)
   end
 end
 
-local function getVisPos()
+function M.getVisPos()
   local _, startLine, startCol  = unpack(vim.fn.getpos("'<"))
   local _, endLine, endCol = unpack(vim.fn.getpos("'>"))
   return startLine, startCol, endLine, endCol
@@ -83,7 +83,7 @@ local function removeSpuriousTrailingNewline(lines)
 end
 
 function M.replaceWith(replacer)
-  local startLine, startCol, endLine, endCol = getVisPos()
+  local startLine, startCol, endLine, endCol = M.getVisPos()
   local lines, replaceEndCol = getText(startLine, startCol, endLine, endCol)
   if replaceEndCol ~= nil then
     endCol = replaceEndCol
