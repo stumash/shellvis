@@ -66,8 +66,8 @@ local function joinWithNewline(lines)
 end
 
 local function splitOnNewline(s)
-  retval = {}
-  i = 1
+  local retval = {}
+  local i = 1
   for line in (s .. "\n"):gmatch("([^\n]*)\n") do
     retval[i] = line
     i = i + 1
@@ -100,10 +100,10 @@ function M.replaceWith(replacer)
   else
     error([[must pass replacer of type "string|function", instead got ]] .. rt)
   end
-  replaceWith = splitOnNewline(replaceWith)
+  replaceWithLines = splitOnNewline(replaceWith)
 
-  removeSpuriousTrailingNewline(replaceWith, startLine, endLine)
-  setText(replaceWith, startLine, startCol, endLine, endCol)
+  removeSpuriousTrailingNewline(replaceWithLines, startLine, endLine)
+  setText(replaceWithLines, startLine, startCol, endLine, endCol)
 end
 
 return M
