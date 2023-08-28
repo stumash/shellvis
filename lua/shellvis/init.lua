@@ -21,6 +21,12 @@ function M.getVisPos()
   return startLine, startCol, endLine, endCol
 end
 
+function M.getVV()
+  local _, startLine, startCol = unpack(vim.fn.getpos("."))
+  local _, endLine, endCol = unpack(vim.fn.getpos("v"))
+  vim.print { [".Line"]=startLine, [".Col"]=startCol, vLine=endLine, vCol=endCol }
+end
+
 local function getText(startLine, startCol, endLine, endCol)
   local lines = vim.fn.getline(startLine, endLine)
   local replaceEndCol = nil
