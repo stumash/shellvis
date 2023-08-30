@@ -1,6 +1,10 @@
 M = {}
 
-local function execute(cmd, text)
+M.CHARWISE = "v"
+M.LINEWISE = "V"
+M.BLOCKWISE = "\22"
+
+function M.execute(cmd, text)
   -- wrap the text in a HEREDOC and read it into a variable
   local s = "IFS='' read -d '' -r TEMPVAR <<'HEREDOC' \n" .. text .. "\nHEREDOC\n"
   -- then echo that variable into the cmd
@@ -16,48 +20,88 @@ local function execute(cmd, text)
 end
 
 function M.getVisPos()
-  local _, startLine, startCol  = unpack(vim.fn.getpos("'<"))
-  local _, endLine, endCol = unpack(vim.fn.getpos("'>"))
-  return startLine, startCol, endLine, endCol
-end
-
-function M.getVV()
-  local _, startLine, startCol = unpack(vim.fn.getpos("."))
+  local _, startLine, startCol  = unpack(vim.fn.getpos("."))
   local _, endLine, endCol = unpack(vim.fn.getpos("v"))
-  vim.print { [".Line"]=startLine, [".Col"]=startCol, vLine=endLine, vCol=endCol }
+
+  if endLine < startLine then
+    startLine, startCol, endLine, endCol = endLine, endCol, startLine, startCol
+  elseif endLine == startLine and endCol < startCol then
+    startCol, endCol = endCol, startCol
+  end
+
+  local mode = vim.fn.mode("fullmode")
+  if mode:sub(1, 1) == M.CHARWISE then -- visual character-wise mode
+    mode = M.CHARWISE
+  elseif mode:sub(1, 1) == M.LINEWISE then -- visual line-wise mode
+    mode = M.LINEWISE
+  elseif mode:sub(1, 1) == M.BLOCKWISE then -- visual block-wise mode
+    mode = M.BLOCKWISE
+  else
+    error(
+      'current mode ' .. mode .. " does not start with one of [" .. 
+        M.CHARWISE .. ", " .. M.LINEWISE .. ", " .. M.BLOCKWISE ..
+      "]"
+    )
+  end
+
+  return {
+    mode = mode,
+    positions = {
+      startLine = startLine,
+      startCol = startCol,
+      endLine = endLine,
+      endCol = endCol,
+    },
+  }
 end
 
-local function getText(startLine, startCol, endLine, endCol)
+function M.getText(positions, mode)
+  local startLine, startCol = positions["startLine"], positions["startCol"]
+  local endLine, endCol = positions["endLine"], positions["endCol"]
+
   local lines = vim.fn.getline(startLine, endLine)
-  local replaceEndCol = nil
 
   if #lines == 0 then
     return ""
-  else
-    local lastLineLen = #(lines[#lines])
-    local nCharsToStripFromLastLine
-
-    if endCol == vim.v.maxcol then
-      -- visual line mode
-      nCharsToStripFromLastLine = 0
-      replaceEndCol = lastLineLen
-    else
-      nCharsToStripFromLastLine = lastLineLen - endCol
-    end
-
-    lines[1] = string.sub(lines[1], startCol)
-    lines[#lines] = string.sub(lines[#lines], 1, -(nCharsToStripFromLastLine+1))
   end
 
-  return lines, replaceEndCol
+  if mode == M.CHARWISE then
+    local lastLineLen = #(lines[#lines])
+    local nCharsToStripFromLastLine = lastLineLen - endCol
+    lines[1] = string.sub(lines[1], startCol)
+    lines[#lines] = (lines[#lines]):sub(1, -(nCharsToStripFromLastLine+1))
+  elseif mode == M.LINEWISE then
+    startCol, endCol = 1, #(lines[#lines])
+  elseif mode == M.BLOCKWISE then
+    for i = 1,#lines do
+      lines[i] = (lines[i]):sub(startCol, endCol)
+    end
+  end
+
+  return lines, {startLine=startLine, startCol=startCol, endLine=endLine, endCol=endCol}
 end
 
-local function setText(lines, startLine, startCol, endLine, endCol)
+function M.setText(positions, mode, lines)
+  vim.print {
+    positions=positions,
+    mode=mode,
+    lines=lines,
+  }
+  local startLine, startCol = positions["startLine"], positions["startCol"]
+  local endLine, endCol = positions["endLine"], positions["endCol"]
   -- wrapped call to nvim_buf_set_text, but with 1-indexed values
   -- just like we get from getpos()
-  local l1, c1 = startLine-1, startCol-1
-  local l2, c2 = endLine-1, endCol
-  vim.api.nvim_buf_set_text(0, l1, c1, l2, c2, lines)
+  if mode == M.CHARWISE or mode == M.LINEWISE then
+    local l1, c1 = startLine-1, startCol-1
+    local l2, c2 = endLine-1, endCol
+    vim.api.nvim_buf_set_text(0, l1, c1, l2, c2, lines)
+  elseif mode == M.BLOCKWISE then
+    local l = startLine-1
+    for i = 1,#lines do
+      vim.api.nvim_buf_set_text(0, l, startCol-1, l, endCol, { lines[i] })
+      l = l + 1
+    end
+  end
 end
 
 local function joinWithNewline(lines)
@@ -82,18 +126,15 @@ local function splitOnNewline(s)
 end
 
 local function removeSpuriousTrailingNewline(lines)
-  -- seems like I gotta do this because the bourne shell adds an extra one in
-  if lines[#lines] == "" then
-    lines[#lines] = nil
-  end
+  -- seems like I gotta do this because the bourne shell adds a trailing newline
+  if lines[#lines] == "" then lines[#lines] = nil end
+  return lines
 end
 
 function M.replaceWith(replacer)
-  local startLine, startCol, endLine, endCol = M.getVisPos()
-  local lines, replaceEndCol = getText(startLine, startCol, endLine, endCol)
-  if replaceEndCol ~= nil then
-    endCol = replaceEndCol
-  end
+  local visPos = M.getVisPos()
+  local positions, mode = visPos["positions"], visPos["mode"]
+  local lines, positions = M.getText(positions, mode)
 
   local linesAsStr = joinWithNewline(lines)
 
@@ -102,14 +143,16 @@ function M.replaceWith(replacer)
   if rt == "function" then
     replaceWith = replacer(linesAsStr)
   elseif rt == "string" then
-    replaceWith = execute(replacer, linesAsStr)
+    replaceWith = M.execute(replacer, linesAsStr)
   else
     error([[must pass replacer of type "string|function", instead got ]] .. rt)
   end
-  replaceWithLines = splitOnNewline(replaceWith)
+  replaceWithLines = removeSpuriousTrailingNewline(splitOnNewline(replaceWith))
 
-  removeSpuriousTrailingNewline(replaceWithLines, startLine, endLine)
-  setText(replaceWithLines, startLine, startCol, endLine, endCol)
+  M.setText(positions, mode, replaceWithLines)
+
+  esckey = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
+  vim.api.nvim_feedkeys(esckey, 'n', false)
 end
 
 return M
