@@ -21,9 +21,9 @@ or Lua:
 local sv = require'shellvis'
 
 -- replace the entire visual selection with the base64 encoding of it
-vim.keymap.set('v', '<leader>esf', function() sv.replaceWith("base64") end)
+vim.keymap.set('v', '<leader>esf', function() sv.replaceWith"base64" end)
 -- replace the entire visual selection with the base64 decoding of it
-vim.keymap.set('v', '<leader>efs', function() sv.replaceWith("base64 -d") end)
+vim.keymap.set('v', '<leader>efs', function() sv.replaceWith"base64 -d" end)
 
 local function justOneX(textToReplace) return "x" end
 -- replace the entire visual selection with a single character "x"
